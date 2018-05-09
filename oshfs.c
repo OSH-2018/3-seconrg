@@ -10,8 +10,8 @@
 
 #define BLOCK 131072
 
-static const size_t size=2*1024*1024*(size_t)1024;
-static void * mem[16*1024];
+static const size_t size=4*1024*1024*(size_t)1024;
+static void * mem[31*1024];
 static const size_t blocksize=BLOCK;
 time_t rawtime;
 int temp=0;
@@ -19,7 +19,7 @@ struct filenode
 {
         char filename[256];
         int filelen;                            //the last part of the content
-        int content[16*1024];
+        int content[31*1024];
         int begin;                              //the number of last part that been filled
         struct filenode *next;
         struct stat st;
@@ -43,7 +43,7 @@ static struct filenode *get_filenode(const char *name)          //寻找和name�
 int findagap(int k)                         //find from the last place where it is found (kongjianjubuxing)
 {
     int i;
-    for (i=k;i<16*1024;i++)
+    for (i=k;i<31*1024;i++)
         if (mem[i]==NULL)
         {
             temp=i;
