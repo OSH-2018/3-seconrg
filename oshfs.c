@@ -66,13 +66,6 @@ int deleteamem(int i)
     return 1;
 }
 
-int min(int a, int b)
-{
-    if (a<b)
-        return a;
-    if (a>=b)
-        return b;
-}
 
 static void create_filenode(const char *filename, const struct stat *st)        //创造一个新的文件节点（在mknod中调用）
 {
