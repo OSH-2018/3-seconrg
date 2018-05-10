@@ -25,11 +25,11 @@ struct filenode
         struct stat st;
         int where;
 };
-static struct filenode *root=NULL;
 static struct filenode *get_filenode(const char *name)          //寻找和name名字一致的文件节点，并将其return，找不到，返回空
 //在fileattr等函数中调用
 {
-    struct filenode *node = root;
+    struct filenode *root = (struct filenode *)mem[0];
+    struct filenode *node = root->next;
     while(node)
     {
         if(strcmp(node->filename, name + 1) != 0)
@@ -49,7 +49,7 @@ int findagap(int k)                         //find from the last place where it 
             temp=i;
             return i;
         }
-    for (i=k-1;i>=0;i--)
+    for (i=k-1;i>0;i--)
         if (mem[i]==NULL)
         {
             temp=i;
@@ -71,7 +71,7 @@ static void create_filenode(const char *filename, const struct stat *st)        
 {
     int place;
     place=findagap(temp);
-    if (place==-1)
+    if (place==0)
     {
         printf("not enough space!\n");
         return ;
@@ -86,17 +86,24 @@ static void create_filenode(const char *filename, const struct stat *st)        
     //将filenamecopy到对应的节点下面
     //新节点的文件属性结构体分配空间
     printf("%d\n",place);
-
+    struct filenode *root = (struct filenode *)mem[0];
+    struct filenode *p;
     memcpy(&(newer->st), st, sizeof( struct stat));
     printf("st\n");
     //将st的内容copy到结构体的节点下面
-    newer->next = root;
+    if (root->next==NULL)
+        root->next=newer;
+    else
+    {
+        p=root->next;
+        newer->next=p;
+        root->next=newer;
+    }
     newer->begin=0;
     newer->where=place;
     newer->filelen=0;
     //从前面拼接
     newer->content[0] =-1;
-    root = newer;
 
 }
 
@@ -145,14 +152,14 @@ static int oshfs_write(const char *path, const char *buf, size_t size, off_t off
     int i,j,remain;
     int a1=offset/BLOCK;
     int a2=offset%BLOCK;
-    printf("%d,%d\n",a1,a2);
-    printf("%s",buf);
+    //printf("%d,%d\n",a1,a2);
+    //printf("%s",buf);
     if (a1<node->filelen)
         memcpy((char *)mem[node->content[a1]]+a2,buf,BLOCK-a2);
     if (a1>=node->filelen)
     {
         place=findagap(temp);
-        if (place==-1)
+        if (place==0)
         {
             printf("not enough space!\n");
             return 0;
@@ -163,7 +170,7 @@ static int oshfs_write(const char *path, const char *buf, size_t size, off_t off
             memset(mem[place], ' ', BLOCK);
             if (j==a1)
                 memcpy((char *)mem[place]+a2,buf,BLOCK-a2);
-            printf("really?\n");
+            //printf("really?\n");
             node->content[j]=place;
             node->filelen++;
         }
@@ -184,7 +191,7 @@ static int oshfs_write(const char *path, const char *buf, size_t size, off_t off
             remain=(size+offset)%BLOCK;
             memcpy((char*)mem[node->content[i]], buf+off, remain);
             node->begin=remain;
-            printf("OK!\n");
+            //printf("OK!\n");
             return size;                            //work finished num>=count
         }
     }
@@ -193,7 +200,7 @@ static int oshfs_write(const char *path, const char *buf, size_t size, off_t off
         if (count==1)
         {
             place=findagap(temp);
-            if (place==-1)
+            if (place==0)
             {
                 printf("not enough space!\n");
                 return 0;
@@ -204,13 +211,13 @@ static int oshfs_write(const char *path, const char *buf, size_t size, off_t off
             node->content[i]=place;
             node->begin=remain;
             node->filelen++;
-            printf("over!\n");
+            //printf("over!\n");
             return size;                            //work finished num>=count
         }
         else
         {
             place=findagap(temp);
-            if (place==-1)
+            if (place==0)
             {
                 printf("not enough space!\n");
                 return 0;
@@ -224,7 +231,7 @@ static int oshfs_write(const char *path, const char *buf, size_t size, off_t off
             count--;
         }
     }//重新为文件内容分配空间
-    printf("END!\n");
+    //printf("END!\n");
     return size;
 }
 
@@ -247,8 +254,8 @@ static int oshfs_read(const char *path, char *buf, size_t size, off_t offset, st
     int a2=offset%BLOCK;
     time(&rawtime);
     node->st.st_atime=rawtime;
-    printf("%d,%d,%d,%d\n",node->content[a1],a1,a2,BLOCK-a2);
-    printf("%d\n",node->filelen);
+    //printf("%d,%d,%d,%d\n",node->content[a1],a1,a2,BLOCK-a2);
+    //printf("%d\n",node->filelen);
     while (ret>off)
     {
         if (ret-off>BLOCK-a2) k=BLOCK-a2;
@@ -303,7 +310,8 @@ static int oshfs_getattr(const char *path, struct stat *stbuf)  //path : 如 /ab
 static int oshfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info *fi)
 //读出所有文件的信息
 {
-    struct filenode *node = root;
+    struct filenode *root = (struct filenode *)mem[0];
+    struct filenode *node = root->next;
     filler(buf, ".", NULL, 0);                  //调用filler函数去填充buff
     filler(buf, "..", NULL, 0);
     while(node)
@@ -316,6 +324,12 @@ static int oshfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler, of
 
 static void *oshfs_init(struct fuse_conn_info *conn)
 {
+    mem[0]=mmap(NULL, BLOCK, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    struct filenode *newer = (struct filenode *)mem[0];
+    strcpy(newer->filename,"root");
+    newer->next=NULL;
+    newer->where=0;
+    printf("init right\n");
     return NULL;
 }
 static int oshfs_open(const char *path, struct fuse_file_info *fi)          //打开文件
@@ -325,14 +339,10 @@ static int oshfs_open(const char *path, struct fuse_file_info *fi)          //�
 
 static int oshfs_unlink(const char *path)               //用于删除一个节点
 {
+    struct filenode *root = (struct filenode *)mem[0];
     struct filenode *node1 = get_filenode(path);
     struct filenode *node2 = root;
-    if (node1==root)                        //特殊处理文件为链表头的情况
-    {
-        root=node1->next;
-        node1->next=NULL;
-    }
-    else if (node1)                         //若node1存在
+    if (node1)                         //若node1存在
     {
         while(node2->next!=node1&&node2!=NULL)
             node2 = node2->next;
