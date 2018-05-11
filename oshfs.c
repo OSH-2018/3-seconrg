@@ -142,7 +142,7 @@ static int oshfs_write(const char *path, const char *buf, size_t size, off_t off
     }
                                     // now there is one
     node->st.st_size = offset + size;                              //修改文件的大小标志
-    int count=(size+offset)/BLOCK+1;                                    //the number of blocks that is needed
+    int count=(size+offset-1)/BLOCK+1;                                    //the number of blocks that is needed
     time(&rawtime);
     node->st.st_ctime=rawtime;
     node->st.st_mtime=rawtime;
@@ -152,6 +152,7 @@ static int oshfs_write(const char *path, const char *buf, size_t size, off_t off
     int i,j,remain;
     int a1=offset/BLOCK;
     int a2=offset%BLOCK;
+    int p;
     //printf("%d,%d\n",a1,a2);
     //printf("%s",buf);
     if (a1<node->filelen)
@@ -192,6 +193,9 @@ static int oshfs_write(const char *path, const char *buf, size_t size, off_t off
             memcpy((char*)mem[node->content[i]], buf+off, remain);
             node->begin=remain;
             //printf("OK!\n");
+	    for (p=i+1;p<node->filelen;p++)
+                deleteamem(p);
+            node->filelen=i+1;
             return size;                            //work finished num>=count
         }
     }
