@@ -11,7 +11,7 @@
 #define BLOCK 131072
 
 static const size_t size=4*1024*1024*(size_t)1024;
-static void * mem[31*1024];
+static void * mem[32*1024];
 static const size_t blocksize=BLOCK;
 time_t rawtime;
 int temp=0;
@@ -43,7 +43,7 @@ static struct filenode *get_filenode(const char *name)          //寻找和name�
 int findagap(int k)                         //find from the last place where it is found (kongjianjubuxing)
 {
     int i;
-    for (i=k;i<31*1024;i++)
+    for (i=k;i<32*1024;i++)
         if (mem[i]==NULL)
         {
             temp=i;
@@ -263,10 +263,10 @@ static int oshfs_read(const char *path, char *buf, size_t size, off_t offset, st
     while (ret>off)
     {
         if (ret-off>BLOCK-a2) k=BLOCK-a2;
-		else k=ret-off;
-		memcpy(buf+off,mem[node->content[a1]]+a2,k);
-		off+=k;
-		offset=0;
+	else k=ret-off;
+	memcpy(buf+off,mem[node->content[a1]]+a2,k);
+	off+=k;
+	a2=0;
         a1++;
     }
     return ret;                                                     //返回读取数据的大小
