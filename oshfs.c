@@ -346,6 +346,10 @@ static void *oshfs_init(struct fuse_conn_info *conn)
         memory[i]=0;
     memory[0]=1;
     memory[1]=1;
+    time(&rawtime);                                                         //初始化的时间
+    newer->st.st_atime=rawtime;
+    newer->st.st_ctime=rawtime;
+    newer->st.st_mtime=rawtime;
     printf("init right\n");
     return NULL;
 }
