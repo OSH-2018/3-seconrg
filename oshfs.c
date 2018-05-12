@@ -155,7 +155,7 @@ static int oshfs_write(const char *path, const char *buf, size_t size, off_t off
     node->st.st_mtime=rawtime;
     int place;                                      //the target mem
     int off=0;
-    int i,j,remain,p;
+    int i,j,remain;
     int a1=offset/BLOCK;
     int a2=offset%BLOCK;
     //printf("%d,%d\n",a1,a2);
@@ -199,9 +199,6 @@ static int oshfs_write(const char *path, const char *buf, size_t size, off_t off
             memcpy((char*)mem[node->content[i]], buf+off, remain);
             node->begin=remain;
             //printf("OK!\n");
-            for (p=i+1;p<node->filelen;p++)
-               deleteamem(node->content[p]);
-            node->filelen=i+1;
             return size;                            //work finished num>=count
         }
     }
