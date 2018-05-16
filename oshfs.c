@@ -40,22 +40,24 @@ static struct filenode *get_filenode(const char *name)          //寻找和name�
     return NULL;
 }
 
-int findagap(int k)                         //find from the last place where it is found (kongjianjubuxing)
+int findagap()                         //find from the last place where it is found (kongjianjubuxing)
 {
     int i;
     int *memory;
+    struct filenode *node;
+    node=(struct filenode *)mem[0];
     memory=(int *)mem[1];
-    for (i=k;i<32*1024;i++)
+    for (i=node->begin;i<32*1024;i++)
         if (memory[i]==0)
         {
-            temp=i;
+            node->begin=i;
             memory[i]=1;
             return i;
         }
-    for (i=k-1;i>0;i--)
+    for (i=node->begin-1;i>0;i--)
         if (memory[i]==0)
         {
-            temp=i;
+            node->begin=i;
             memory[i]=1;
             return i;
         }
@@ -77,7 +79,7 @@ int deleteamem(int i)
 static void create_filenode(const char *filename, const struct stat *st)        //创造一个新的文件节点（在mknod中调用）
 {
     int place;
-    place=findagap(temp);
+    place=findagap();
     if (place==0)
     {
         printf("not enough space!\n");
@@ -148,7 +150,8 @@ static int oshfs_write(const char *path, const char *buf, size_t size, off_t off
         return 0;
     }
                                     // now there is one
-    node->st.st_size = offset + size;                              //修改文件的大小标志
+    if (offset+size>node->st.st_size)
+            node->st.st_size = offset + size;                              //修改文件的大小标志
     int count=(size+offset-1)/BLOCK+1;                                     //the number of blocks that is needed,[(size+offset)/BLOCK]+1
     time(&rawtime);
     node->st.st_ctime=rawtime;
@@ -164,7 +167,7 @@ static int oshfs_write(const char *path, const char *buf, size_t size, off_t off
         memcpy((char *)mem[node->content[a1]]+a2,buf,BLOCK-a2);
     if (a1>=node->filelen)
     {
-        place=findagap(temp);
+        place=findagap();
         if (place==0)
         {
             printf("not enough space!\n");
@@ -205,7 +208,7 @@ static int oshfs_write(const char *path, const char *buf, size_t size, off_t off
     {
         if (count==1)
         {
-            place=findagap(temp);
+            place=findagap();
             if (place==0)
             {
                 printf("not enough space!\n");
@@ -222,7 +225,7 @@ static int oshfs_write(const char *path, const char *buf, size_t size, off_t off
         }
         else
         {
-            place=findagap(temp);
+            place=findagap();
             if (place==0)
             {
                 printf("not enough space!\n");
@@ -335,6 +338,7 @@ static void *oshfs_init(struct fuse_conn_info *conn)
     strcpy(newer->filename,"root");
     newer->next=NULL;
     newer->where=0;
+    newer->begin=0;
     mem[1]=mmap(NULL, BLOCK, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
     int *memory=(int *)mem[1];
     int i;
